@@ -181,21 +181,38 @@ const PaymentOTPForm = () => {
                 value={otp[index] || ''}
                 onChange={(e) => {
                   const val = e.target.value.replace(/\D/g, "");
+                  const newOtp = otp.split('');
                   if (val) {
-                    const newOtp = otp.split('');
                     newOtp[index] = val[val.length - 1];
                     setOtp(newOtp.join(''));
                     // Auto-focus next input
-                    if (index < 5 && val) {
+                    if (index < 5) {
                       const nextInput = e.target.parentElement?.nextElementSibling?.querySelector('input');
                       nextInput?.focus();
                     }
+                  } else {
+                    // Clear current slot when input becomes empty (via Delete/Backspace)
+                    newOtp[index] = '';
+                    setOtp(newOtp.join(''));
                   }
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Backspace' && !otp[index] && index > 0) {
-                    const prevInput = e.currentTarget.parentElement?.previousElementSibling?.querySelector('input');
-                    prevInput?.focus();
+                  if (e.key === 'Backspace') {
+                    const currentOtp = otp.split('');
+                    if (currentOtp[index]) {
+                      // Delete current digit
+                      currentOtp[index] = '';
+                      setOtp(currentOtp.join(''));
+                      // Keep focus on current input
+                      e.preventDefault();
+                    } else if (index > 0) {
+                      // Move to previous and delete it
+                      currentOtp[index - 1] = '';
+                      setOtp(currentOtp.join(''));
+                      const prevInput = e.currentTarget.parentElement?.previousElementSibling?.querySelector('input');
+                      prevInput?.focus();
+                      e.preventDefault();
+                    }
                   }
                 }}
                 inputMode="numeric"
