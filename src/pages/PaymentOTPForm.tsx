@@ -172,12 +172,16 @@ const PaymentOTPForm = () => {
       </div>
       
       <form onSubmit={handleSubmit}>
-        {/* OTP Input - 6 digits */}
+        {/* OTP Input - 6 digits with Mobile-Optimized Deletion */}
         <div className="mb-6">
           <div className="flex gap-2 justify-center items-center" dir="ltr">
             {[0, 1, 2, 3, 4, 5].map((index) => (
               <Input
                 key={index}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={1}
                 value={otp[index] || ''}
                 onChange={(e) => {
                   const val = e.target.value.replace(/\D/g, "");
@@ -185,50 +189,77 @@ const PaymentOTPForm = () => {
                     const newOtp = otp.split('');
                     newOtp[index] = val[val.length - 1];
                     setOtp(newOtp.join(''));
+                    setError("");
+                    
                     // Auto-focus next input
-                    if (index < 5 && val) {
-                      const nextInput = e.target.parentElement?.nextElementSibling?.querySelector('input');
-                      nextInput?.focus();
+                    if (index < 5) {
+                      const inputs = document.querySelectorAll<HTMLInputElement>('input[type="text"][inputmode="numeric"]');
+                      inputs[index + 1]?.focus();
                     }
+                  } else if (e.target.value === '') {
+                    // Handle deletion
+                    const newOtp = otp.split('');
+                    newOtp[index] = '';
+                    setOtp(newOtp.join(''));
                   }
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Backspace' && !otp[index] && index > 0) {
-                    const prevInput = e.currentTarget.parentElement?.previousElementSibling?.querySelector('input');
-                    prevInput?.focus();
+                  // Handle backspace/delete from any keyboard (desktop or mobile)
+                  if (e.key === 'Backspace' || e.key === 'Delete') {
+                    const currentValue = otp[index];
+                    
+                    if (!currentValue && index > 0) {
+                      // If current input is empty, move to previous and delete
+                      e.preventDefault();
+                      const newOtp = otp.split('');
+                      newOtp[index - 1] = '';
+                      setOtp(newOtp.join(''));
+                      
+                      // Focus previous input
+                      const inputs = document.querySelectorAll<HTMLInputElement>('input[type="text"][inputmode="numeric"]');
+                      inputs[index - 1]?.focus();
+                    } else if (currentValue) {
+                      // If current has value, delete it
+                      const newOtp = otp.split('');
+                      newOtp[index] = '';
+                      setOtp(newOtp.join(''));
+                    }
                   }
                 }}
-                inputMode="numeric"
-                maxLength={1}
+                onFocus={(e) => {
+                  // Select all on focus for easy replacement
+                  e.target.select();
+                }}
                 autoComplete={index === 0 ? "one-time-code" : "off"}
-                className="w-12 h-14 sm:w-14 sm:h-16 text-center text-xl sm:text-2xl font-bold border-2"
+                className="w-12 h-14 sm:w-14 sm:h-16 text-center text-xl sm:text-2xl font-bold border-2 rounded-lg transition-all"
                 style={{
-                  borderColor: otp[index] ? branding.colors.primary : undefined
+                  borderColor: otp[index] ? branding.colors.primary : `${branding.colors.primary}40`,
+                  background: otp[index] ? `${branding.colors.primary}10` : 'transparent'
                 }}
                 disabled={attempts >= 3}
                 required
               />
             ))}
             
-            {/* Delete Button */}
+            {/* Delete Button - More prominent on mobile */}
             {otp.length > 0 && attempts < 3 && (
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={handleClearOTP}
-                className="w-8 h-8 sm:w-10 sm:h-10 p-0 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors mr-2"
+                className="w-10 h-10 sm:w-12 sm:h-12 p-0 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors flex-shrink-0 mr-2"
               >
-                <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </Button>
             )}
           </div>
           
-          {/* Keyboard Instructions */}
+          {/* Mobile-friendly Instructions */}
           {otp.length > 0 && attempts < 3 && (
             <div className="text-center mt-3">
               <p className="text-xs text-muted-foreground">
-                اضغط <kbd className="px-1.5 py-0.5 text-xs bg-muted rounded">Esc</kbd> أو <kbd className="px-1.5 py-0.5 text-xs bg-muted rounded">Ctrl+Backspace</kbd> أو زر <X className="w-3 h-3 inline mx-1" /> لمسح الرمز
+                اضغط زر <X className="w-3 h-3 inline mx-1" /> لمسح الرمز
               </p>
             </div>
           )}
